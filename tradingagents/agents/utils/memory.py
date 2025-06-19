@@ -25,7 +25,6 @@ class FinancialSituationMemory:
         else:
             model = SentenceTransformer("all-MiniLM-L6-v2")
             embeddings = model.encode(text, convert_to_numpy=True, precision='int8')
-            # 单文本返回一维数组，多文本返回二维数组
             return embeddings
 
 
