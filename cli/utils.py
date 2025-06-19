@@ -151,6 +151,9 @@ def select_shallow_thinking_agent(provider) -> str:
         ],
         "ollama": [
             ("llama3.2 local", "llama3.2"),
+        ],
+        "deepseek": [
+            ("DeepSeek V3 - a 685B-parameter, mixture-of-experts model", "deepseek-chat")
         ]
     }
 
@@ -212,6 +215,10 @@ def select_deep_thinking_agent(provider) -> str:
         ],
         "ollama": [
             ("qwen3", "qwen3"),
+        ],
+        "deepseek": [
+            ("DeepSeek V3 - a 685B-parameter, mixture-of-experts model", "deepseek-chat"),
+            ("DeepSeek-R1 - latest iteration of the flagship chat model family from the DeepSeek team.", "deepseek-reasoner"),
         ]
     }
     
