@@ -24,7 +24,7 @@ class FinancialSituationMemory:
             return response.data[0].embedding
         else:
             model = SentenceTransformer("all-MiniLM-L6-v2")
-            embeddings = model.encode(text, convert_to_numpy=True, precision='int8')
+            embeddings = model.encode(text, convert_to_numpy=True)
             return embeddings
 
 
