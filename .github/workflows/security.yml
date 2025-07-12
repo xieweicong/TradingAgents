@@ -1,0 +1,287 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security scans weekly on Sundays at 3 AM UTC
+    - cron: '0 3 * * 0'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # Dependency vulnerability scanning
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety pip-audit
+    
+    - name: Run Safety check
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check --short-report
+      continue-on-error: true
+    
+    - name: Run pip-audit
+      run: |
+        pip-audit --format=json --output=pip-audit-report.json
+        pip-audit --format=cyclonedx-json --output=sbom.json
+      continue-on-error: true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dependency-security-reports
+        path: |
+          safety-report.json
+          pip-audit-report.json
+          sbom.json
+        retention-days: 30
+
+  # Code security scanning
+  code-security:
+    name: Code Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml] semgrep
+    
+    - name: Run Bandit security check
+      run: |
+        bandit -r tradingagents/ extensions/ \
+          -f json -o bandit-report.json \
+          -ll -i || true
+        bandit -r tradingagents/ extensions/ \
+          -f txt -o bandit-report.txt \
+          -ll -i || true
+      continue-on-error: true
+    
+    - name: Run Semgrep security scan
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json . || true
+        semgrep --config=auto --text --output=semgrep-report.txt . || true
+      continue-on-error: true
+    
+    - name: Upload code security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: code-security-reports
+        path: |
+          bandit-report.json
+          bandit-report.txt
+          semgrep-report.json
+          semgrep-report.txt
+        retention-days: 30
+
+  # Secrets scanning
+  secrets-scan:
+    name: Secrets Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better secret detection
+    
+    - name: Run TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+  # Docker security scanning
+  docker-security:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      run: |
+        cd deployment/docker
+        docker build -t enhanced-trading:security-scan .
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'enhanced-trading:security-scan'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # API key validation
+  api-key-validation:
+    name: API Key Security Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check for hardcoded API keys
+      run: |
+        echo "🔍 Scanning for potential API keys..."
+        
+        # Common API key patterns
+        patterns=(
+          "sk-[a-zA-Z0-9]{48}"  # OpenAI
+          "AKIA[0-9A-Z]{16}"    # AWS
+          "[0-9a-f]{32}"        # Generic 32-char hex
+          "AIza[0-9A-Za-z\\-_]{35}"  # Google
+        )
+        
+        found_issues=false
+        
+        for pattern in "${patterns[@]}"; do
+          if grep -r -E "$pattern" --include="*.py" --include="*.yml" --include="*.yaml" --include="*.json" . --exclude-dir=.git; then
+            echo "⚠️ Potential API key pattern found: $pattern"
+            found_issues=true
+          fi
+        done
+        
+        # Check for suspicious environment variable assignments
+        if grep -r -E "(API_KEY|SECRET|PASSWORD|TOKEN)\s*=\s*['\"][^'\"]*['\"]" --include="*.py" . --exclude-dir=.git; then
+          echo "⚠️ Potential hardcoded secrets found"
+          found_issues=true
+        fi
+        
+        if [ "$found_issues" = true ]; then
+          echo "❌ Security issues detected. Please review the findings above."
+          exit 1
+        else
+          echo "✅ No obvious API key leaks detected"
+        fi
+
+  # Configuration security check
+  config-security:
+    name: Configuration Security Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check configuration security
+      run: |
+        echo "🔍 Checking configuration security..."
+        
+        # Check for debug mode in production configs
+        if grep -r "debug.*true" configs/ --include="*.json" --include="*.yaml" --include="*.yml" 2>/dev/null; then
+          echo "⚠️ Debug mode enabled in config files"
+        fi
+        
+        # Check for insecure CORS settings
+        if grep -r "allow.*\*" configs/ --include="*.json" --include="*.yaml" --include="*.yml" 2>/dev/null; then
+          echo "⚠️ Potentially insecure CORS settings found"
+        fi
+        
+        # Check for default passwords
+        if grep -r -i "password.*default\|password.*admin\|password.*123" configs/ --include="*.json" --include="*.yaml" --include="*.yml" 2>/dev/null; then
+          echo "⚠️ Default passwords found in config"
+        fi
+        
+        echo "✅ Configuration security check completed"
+
+  # Security summary
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-security, secrets-scan, api-key-validation, config-security]
+    if: always()
+    
+    steps:
+    - name: Download all security artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: "*security-reports"
+        merge-multiple: true
+    
+    - name: Generate security summary
+      run: |
+        echo "# 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "- Dependency Scan: ${{ needs.dependency-scan.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Code Security: ${{ needs.code-security.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Secrets Scan: ${{ needs.secrets-scan.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- API Key Validation: ${{ needs.api-key-validation.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Config Security: ${{ needs.config-security.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Count issues from reports if they exist
+        if [ -f "safety-report.json" ]; then
+          safety_issues=$(jq '.report.vulnerabilities | length' safety-report.json 2>/dev/null || echo "unknown")
+          echo "- Safety Issues: $safety_issues" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f "bandit-report.json" ]; then
+          bandit_issues=$(jq '.results | length' bandit-report.json 2>/dev/null || echo "unknown")
+          echo "- Bandit Issues: $bandit_issues" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📋 Detailed reports are available in the workflow artifacts." >> $GITHUB_STEP_SUMMARY
+    
+    - name: Check critical failures
+      run: |
+        if [ "${{ needs.secrets-scan.result }}" = "failure" ] || \
+           [ "${{ needs.api-key-validation.result }}" = "failure" ]; then
+          echo "❌ Critical security issues detected"
+          exit 1
+        else
+          echo "✅ No critical security issues detected"
+        fi

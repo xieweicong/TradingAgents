@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+
+  # Main application for testing
+  trading-app-test:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    environment:
+      - TRADING_ENV=test
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test-mock-key}
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY:-test-mock-key}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-test-mock-key}
+      - DISABLE_ONLINE_TOOLS=true
+      - PYTHONPATH=/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../data:/app/data
+      - ../../tests:/app/tests
+      - ../../configs:/app/configs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: >
+      sh -c "
+        echo 'Starting test environment...' &&
+        python -m pytest tests/ --tb=short -v &&
+        python extensions/api/main.py
+      "
+
+  # Database for integration testing (optional)
+  postgres-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: trading_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d trading_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+  postgres_test_data:

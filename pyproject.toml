@@ -1,9 +1,17 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "tradingagents"
-version = "0.1.0"
-description = "Add your description here"
+name = "enhanced-tradingagents"
+version = "0.2.0"
+description = "Enhanced TradingAgents with multi-threading, API, and production fixes"
 readme = "README.md"
-requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Enhanced TradingAgents Contributors"},
+]
+requires-python = ">=3.11"
 dependencies = [
     "akshare>=1.16.98",
     "backtrader>=1.9.78.123",
@@ -31,4 +39,116 @@ dependencies = [
     "tushare>=1.4.21",
     "typing-extensions>=4.14.0",
     "yfinance>=0.2.63",
+    # Enhanced features
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+    "aiohttp>=3.8.0",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.10.0",
+    "pytest-xdist>=3.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "bandit>=1.7.0",
+    "safety>=2.3.0",
+    "pre-commit>=3.0.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.10.0",
+    "httpx>=0.24.0",
+]
+docs = [
+    "mkdocs>=1.4.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocs-mermaid2-plugin>=0.6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/enhanced-tradingagents"
+Repository = "https://github.com/yourusername/enhanced-tradingagents"
+"Bug Tracker" = "https://github.com/yourusername/enhanced-tradingagents/issues"
+
+# Black configuration
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.venv
+  | build
+  | dist
+  | data
+  | backup_before_restructure
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+skip_glob = ["data/*", "backup_before_restructure/*"]
+
+# mypy configuration
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+
+# pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--cov=tradingagents",
+    "--cov=extensions",
+    "--cov-report=term-missing",
+]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "api: marks tests as API tests",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["tradingagents", "extensions"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "data/*",
+    "backup_before_restructure/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
 ]

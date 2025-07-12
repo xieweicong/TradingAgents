@@ -1,7 +1,9 @@
+import os
+
 import chromadb
 from chromadb.config import Settings
 from openai import OpenAI
-
+from sentence_transformers import SentenceTransformer
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
@@ -9,17 +11,36 @@ class FinancialSituationMemory:
             self.embedding = "nomic-embed-text"
         else:
             self.embedding = "text-embedding-3-small"
-        self.client = OpenAI(base_url=config["backend_url"])
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
-        self.situation_collection = self.chroma_client.create_collection(name=name)
+        
+        # Add unique suffix to collection name if provided in config
+        unique_name = name
+        if "memory_suffix" in config:
+            unique_name = f"{name}{config['memory_suffix']}"
+        
+        # Try to get existing collection first, create if doesn't exist
+        try:
+            self.situation_collection = self.chroma_client.get_collection(name=unique_name)
+        except:
+            try:
+                self.situation_collection = self.chroma_client.create_collection(name=unique_name)
+            except:
+                # If creation fails, try to get again (race condition handling)
+                self.situation_collection = self.chroma_client.get_collection(name=unique_name)
 
     def get_embedding(self, text):
         """Get OpenAI embedding for a text"""
-        
-        response = self.client.embeddings.create(
-            model=self.embedding, input=text
-        )
-        return response.data[0].embedding
+        if os.environ.get("OPENAI_API_KEY"):
+            client = OpenAI()
+            response = client.embeddings.create(
+                model=self.embedding, input=text
+            )
+            return response.data[0].embedding
+        else:
+            model = SentenceTransformer("all-MiniLM-L6-v2")
+            embeddings = model.encode(text, convert_to_numpy=True)
+            return embeddings
+
 
     def add_situations(self, situations_and_advice):
         """Add financial situations and their corresponding advice. Parameter is a list of tuples (situation, rec)"""

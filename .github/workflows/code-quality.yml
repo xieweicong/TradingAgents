@@ -1,0 +1,268 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Formatting and linting
+  formatting:
+    name: Code Formatting & Linting
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Install formatting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black isort flake8 mypy pylint
+    
+    - name: Check code formatting with Black
+      run: |
+        black --check --diff --color .
+    
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only --diff --color .
+    
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --statistics \
+          --max-line-length=88 \
+          --extend-ignore=E203,W503 \
+          --exclude=.git,__pycache__,build,dist,.eggs
+    
+    - name: Type checking with mypy
+      run: |
+        mypy tradingagents/ extensions/ \
+          --ignore-missing-imports \
+          --no-strict-optional \
+          --allow-untyped-calls
+      continue-on-error: true
+
+  # Code complexity and quality metrics
+  complexity:
+    name: Code Complexity Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Install analysis tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install radon xenon mccabe pylint bandit
+        pip install -r requirements.txt
+    
+    - name: Cyclomatic complexity analysis
+      run: |
+        radon cc . --min B --show-complexity --total-average
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 📊 Complexity Analysis" >> $GITHUB_STEP_SUMMARY
+        radon cc . --min B --json | python -c "
+import json, sys
+data = json.load(sys.stdin)
+total_functions = sum(len(v) for v in data.values())
+print(f'- Total functions analyzed: {total_functions}')
+print(f'- Files with complexity issues: {len([k for k, v in data.items() if v])}')
+" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Maintainability index
+      run: |
+        radon mi . --min B --show --sort
+    
+    - name: Code quality with Pylint
+      run: |
+        pylint tradingagents/ extensions/ \
+          --output-format=json \
+          --reports=yes \
+          --score=yes > pylint-report.json || true
+        
+        # Generate summary
+        python -c "
+import json
+try:
+    with open('pylint-report.json') as f:
+        data = json.load(f)
+    print(f'Pylint score: {len(data)} issues found')
+except:
+    print('Pylint analysis completed')
+" >> $GITHUB_STEP_SUMMARY
+      continue-on-error: true
+    
+    - name: Upload quality reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: code-quality-reports
+        path: |
+          pylint-report.json
+        retention-days: 14
+
+  # Documentation quality
+  documentation:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Install documentation tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install pydocstyle interrogate
+    
+    - name: Check docstring style
+      run: |
+        pydocstyle tradingagents/ extensions/ \
+          --convention=google \
+          --add-ignore=D100,D104,D105 || true
+    
+    - name: Check docstring coverage
+      run: |
+        interrogate -v tradingagents/ extensions/ \
+          --ignore-init-method \
+          --ignore-magic \
+          --ignore-module \
+          --fail-under=50 || true
+
+  # Import and dependency analysis
+  dependencies:
+    name: Dependency Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Install analysis tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install pipdeptree pip-check-reqs isort
+    
+    - name: Check dependency tree
+      run: |
+        pip install -r requirements.txt
+        pipdeptree --warn silence
+        pipdeptree --json > dependency-tree.json
+    
+    - name: Check for unused dependencies
+      run: |
+        pip-check-reqs --ignore-file=.pipignore . || true
+    
+    - name: Check import order
+      run: |
+        isort --check-only --diff . || true
+    
+    - name: Upload dependency analysis
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependency-analysis
+        path: dependency-tree.json
+        retention-days: 14
+
+  # Code metrics and statistics
+  metrics:
+    name: Code Metrics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Generate code statistics
+      run: |
+        echo "## 📈 Code Statistics" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Line counts
+        total_lines=$(find . -name "*.py" -not -path "./.git/*" -not -path "./venv/*" -not -path "./.venv/*" | xargs wc -l | tail -1 | awk '{print $1}')
+        file_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./venv/*" -not -path "./.venv/*" | wc -l)
+        
+        echo "- Total Python files: $file_count" >> $GITHUB_STEP_SUMMARY
+        echo "- Total lines of code: $total_lines" >> $GITHUB_STEP_SUMMARY
+        
+        # Directory breakdown
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Directory Breakdown" >> $GITHUB_STEP_SUMMARY
+        
+        for dir in tradingagents extensions tests; do
+          if [ -d "$dir" ]; then
+            dir_lines=$(find $dir -name "*.py" | xargs wc -l | tail -1 | awk '{print $1}' 2>/dev/null || echo "0")
+            dir_files=$(find $dir -name "*.py" | wc -l)
+            echo "- $dir/: $dir_files files, $dir_lines lines" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+    
+    - name: Calculate test coverage ratio
+      run: |
+        if [ -d "tests" ]; then
+          test_lines=$(find tests -name "*.py" | xargs wc -l | tail -1 | awk '{print $1}' 2>/dev/null || echo "0")
+          src_lines=$(find tradingagents extensions -name "*.py" | xargs wc -l | tail -1 | awk '{print $1}' 2>/dev/null || echo "1")
+          ratio=$(echo "scale=2; $test_lines * 100 / $src_lines" | bc -l 2>/dev/null || echo "0")
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Test to source ratio: ${ratio}%" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  # Final quality gate
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [formatting, complexity, documentation, dependencies, metrics]
+    if: always()
+    
+    steps:
+    - name: Quality gate check
+      run: |
+        echo "## 🚪 Quality Gate Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- Formatting: ${{ needs.formatting.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Complexity: ${{ needs.complexity.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Documentation: ${{ needs.documentation.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Dependencies: ${{ needs.dependencies.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Metrics: ${{ needs.metrics.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Only fail on critical formatting issues
+        if [ "${{ needs.formatting.result }}" = "failure" ]; then
+          echo "❌ Quality gate failed due to formatting issues"
+          echo "Please run: black . && isort ." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        else
+          echo "✅ Quality gate passed"
+        fi

@@ -6,6 +6,7 @@ import json
 from datetime import date
 from typing import Dict, Any, Tuple, List, Optional
 
+from langchain_deepseek import ChatDeepSeek
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -67,17 +68,28 @@ class TradingAgentsGraph:
         elif self.config["llm_provider"].lower() == "google":
             self.deep_thinking_llm = ChatGoogleGenerativeAI(model=self.config["deep_think_llm"])
             self.quick_thinking_llm = ChatGoogleGenerativeAI(model=self.config["quick_think_llm"])
+        elif self.config["llm_provider"].lower() == 'deepseek':
+            self.deep_thinking_llm = ChatDeepSeek(model=self.config["deep_think_llm"])
+            self.quick_thinking_llm = ChatDeepSeek(model=self.config["quick_think_llm"])
         else:
             raise ValueError(f"Unsupported LLM provider: {self.config['llm_provider']}")
         
         self.toolkit = Toolkit(config=self.config)
 
-        # Initialize memories
-        self.bull_memory = FinancialSituationMemory("bull_memory", self.config)
-        self.bear_memory = FinancialSituationMemory("bear_memory", self.config)
-        self.trader_memory = FinancialSituationMemory("trader_memory", self.config)
-        self.invest_judge_memory = FinancialSituationMemory("invest_judge_memory", self.config)
-        self.risk_manager_memory = FinancialSituationMemory("risk_manager_memory", self.config)
+        # Initialize memories (only if not disabled)
+        if not self.config.get("disable_memory", False):
+            self.bull_memory = FinancialSituationMemory("bull_memory", self.config)
+            self.bear_memory = FinancialSituationMemory("bear_memory", self.config)
+            self.trader_memory = FinancialSituationMemory("trader_memory", self.config)
+            self.invest_judge_memory = FinancialSituationMemory("invest_judge_memory", self.config)
+            self.risk_manager_memory = FinancialSituationMemory("risk_manager_memory", self.config)
+        else:
+            # Set to None when memory is disabled
+            self.bull_memory = None
+            self.bear_memory = None
+            self.trader_memory = None
+            self.invest_judge_memory = None
+            self.risk_manager_memory = None
 
         # Create tool nodes
         self.tool_nodes = self._create_tool_nodes()
