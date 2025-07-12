@@ -76,12 +76,20 @@ class TradingAgentsGraph:
         
         self.toolkit = Toolkit(config=self.config)
 
-        # Initialize memories
-        self.bull_memory = FinancialSituationMemory("bull_memory", self.config)
-        self.bear_memory = FinancialSituationMemory("bear_memory", self.config)
-        self.trader_memory = FinancialSituationMemory("trader_memory", self.config)
-        self.invest_judge_memory = FinancialSituationMemory("invest_judge_memory", self.config)
-        self.risk_manager_memory = FinancialSituationMemory("risk_manager_memory", self.config)
+        # Initialize memories (only if not disabled)
+        if not self.config.get("disable_memory", False):
+            self.bull_memory = FinancialSituationMemory("bull_memory", self.config)
+            self.bear_memory = FinancialSituationMemory("bear_memory", self.config)
+            self.trader_memory = FinancialSituationMemory("trader_memory", self.config)
+            self.invest_judge_memory = FinancialSituationMemory("invest_judge_memory", self.config)
+            self.risk_manager_memory = FinancialSituationMemory("risk_manager_memory", self.config)
+        else:
+            # Set to None when memory is disabled
+            self.bull_memory = None
+            self.bear_memory = None
+            self.trader_memory = None
+            self.invest_judge_memory = None
+            self.risk_manager_memory = None
 
         # Create tool nodes
         self.tool_nodes = self._create_tool_nodes()

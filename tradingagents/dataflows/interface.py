@@ -579,7 +579,22 @@ def get_stockstats_indicator(
         print(
             f"Error getting stockstats indicator data for indicator {indicator} on {curr_date}: {e}"
         )
-        return ""
+        # If offline mode failed due to CSV issues, try online mode as fallback
+        if not online and "Cannot parse CSV data" in str(e):
+            try:
+                print(f"Retrying {indicator} for {symbol} in online mode...")
+                indicator_value = StockstatsUtils.get_stock_stats(
+                    symbol,
+                    indicator,
+                    curr_date,
+                    os.path.join(DATA_DIR, "market_data", "price_data"),
+                    online=True,
+                )
+            except Exception as e2:
+                print(f"Online mode also failed for {indicator}: {e2}")
+                return ""
+        else:
+            return ""
 
     return str(indicator_value)
 

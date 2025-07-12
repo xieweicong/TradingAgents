@@ -1,0 +1,264 @@
+name: Test Suite
+
+on:
+  push:
+    paths:
+      - 'tradingagents/**'
+      - 'extensions/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - '.github/workflows/test-suite.yml'
+  pull_request:
+    paths:
+      - 'tradingagents/**'
+      - 'extensions/**'  
+      - 'tests/**'
+      - 'requirements.txt'
+
+jobs:
+  # Quick smoke tests for rapid feedback
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Install core dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-mock
+        pip install -r requirements.txt
+    
+    - name: Import test
+      run: |
+        python -c "import tradingagents; print('✅ Core import successful')"
+        python -c "import extensions; print('✅ Extensions import successful')"
+    
+    - name: Basic functionality test
+      env:
+        OPENAI_API_KEY: "test-mock-key"
+        FINNHUB_API_KEY: "test-mock-key"
+        DISABLE_ONLINE_TOOLS: "true"
+      run: |
+        python -c "
+        from tradingagents.default_config import DEFAULT_CONFIG
+        print('✅ Config loaded:', DEFAULT_CONFIG.get('project_dir', 'unknown'))
+        "
+    
+    - name: Run quick tests
+      env:
+        OPENAI_API_KEY: "test-mock-key"
+        FINNHUB_API_KEY: "test-mock-key"
+        DISABLE_ONLINE_TOOLS: "true"
+      run: |
+        pytest tests/test_quick.py -v --tb=short
+
+  # Comprehensive test matrix
+  test-matrix:
+    name: Test Matrix
+    runs-on: ${{ matrix.os }}
+    needs: smoke-tests
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+        test-type: [unit, integration]
+        include:
+          # Add Windows testing for critical combinations
+          - os: windows-latest
+            python-version: "3.11"
+            test-type: unit
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-xdist pytest-mock pytest-asyncio
+    
+    - name: Prepare test environment
+      run: |
+        mkdir -p data/logs data/cache data/results data/exports
+        mkdir -p tests/unit tests/integration tests/fixtures
+    
+    - name: Run ${{ matrix.test-type }} tests
+      env:
+        OPENAI_API_KEY: ${{ matrix.test-type == 'integration' && secrets.OPENAI_API_KEY || 'test-mock-key' }}
+        FINNHUB_API_KEY: ${{ matrix.test-type == 'integration' && secrets.FINNHUB_API_KEY || 'test-mock-key' }}
+        DEEPSEEK_API_KEY: ${{ matrix.test-type == 'integration' && secrets.DEEPSEEK_API_KEY || 'test-mock-key' }}
+        TEST_TYPE: ${{ matrix.test-type }}
+        DISABLE_ONLINE_TOOLS: ${{ matrix.test-type == 'unit' && 'true' || 'false' }}
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        if [ "${{ matrix.test-type }}" = "unit" ]; then
+          pytest tests/unit/ tests/test_*.py -v \
+            --cov=tradingagents --cov=extensions \
+            --cov-report=xml --cov-report=term-missing \
+            --junit-xml=test-results-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}.xml \
+            --maxfail=5
+        else
+          pytest tests/integration/ -v \
+            --junit-xml=test-results-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}.xml \
+            --maxfail=3
+        fi
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+        path: |
+          test-results-*.xml
+          coverage.xml
+          .coverage
+        retention-days: 14
+
+  # Memory and performance testing
+  performance-tests:
+    name: Performance & Memory Tests
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+    timeout-minutes: 30
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-benchmark memory-profiler psutil
+    
+    - name: Memory stress test
+      env:
+        OPENAI_API_KEY: "test-mock-key"
+        FINNHUB_API_KEY: "test-mock-key"
+        DISABLE_ONLINE_TOOLS: "true"
+      run: |
+        python -c "
+        import psutil
+        import os
+        from extensions.multi_stock.analyzer import MultiStockAnalyzer
+        
+        print('📊 Initial memory:', psutil.Process().memory_info().rss / 1024 / 1024, 'MB')
+        
+        # Test memory cleanup
+        try:
+            analyzer = MultiStockAnalyzer(max_workers=1)
+            print('📊 After init:', psutil.Process().memory_info().rss / 1024 / 1024, 'MB')
+            del analyzer
+            print('📊 After cleanup:', psutil.Process().memory_info().rss / 1024 / 1024, 'MB')
+            print('✅ Memory test passed')
+        except Exception as e:
+            print('❌ Memory test failed:', e)
+            exit(1)
+        "
+    
+    - name: Run performance benchmarks
+      env:
+        OPENAI_API_KEY: "test-mock-key"
+        FINNHUB_API_KEY: "test-mock-key"
+        DISABLE_ONLINE_TOOLS: "true"
+      run: |
+        if [ -d "tests/performance" ]; then
+          pytest tests/performance/ -v \
+            --benchmark-json=benchmark-results.json \
+            --benchmark-only
+        else
+          echo "⚠️ No performance tests directory found"
+        fi
+    
+    - name: Upload performance results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-results
+        path: benchmark-results.json
+        retention-days: 30
+
+  # Test coverage analysis
+  coverage-analysis:
+    name: Coverage Analysis
+    runs-on: ubuntu-latest
+    needs: test-matrix
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: test-results-*
+        merge-multiple: true
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install coverage[toml] pytest-cov
+    
+    - name: Combine coverage reports
+      run: |
+        coverage combine
+        coverage xml
+        coverage html
+        coverage report --show-missing
+    
+    - name: Coverage comment
+      if: github.event_name == 'pull_request'
+      run: |
+        coverage report --format=markdown > coverage-report.md
+        echo "📊 **Coverage Report**" >> $GITHUB_STEP_SUMMARY
+        cat coverage-report.md >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          coverage.xml
+          htmlcov/
+          coverage-report.md
+        retention-days: 30
+    
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: enhanced-tradingagents

@@ -1,8 +1,128 @@
-env/
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pyenv
+.python-version
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific
 .DS_Store
-*.csv
-src/
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs & Reports
+*.log
+*.log.*
+logs/
+daily_reports/
+daily_analysis/
+multi_analysis_logs/
+analysis_session_*.log
+session_summary_*.json
+
+# Data & Results (exclude from git)
+data/
+results/
 eval_results/
 eval_data/
-*.egg-info/
+multi_analysis_results/
+dataflows/data_cache/
+*.csv
+*.json.backup.*
+*.pkl
+*.parquet
+*.h5
+*.hdf5
+
+# Cache & Temporary
+.cache/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.nox/
+temp/
+tmp/
+
+# Configuration (exclude sensitive)
+configs/*.secret.json
+configs/local.json
+configs/production.json
+.secrets/
+secrets/
+
+# Backup & Archive
+backup_before_restructure/
+*.backup
+*.bak
+*.orig
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+
+# Editor specific
+.claude/
+.cursor/
+
+# API keys and credentials
+*.key
+*.pem
+api_keys.txt
+credentials.json
+
+# Docker
+.dockerignore

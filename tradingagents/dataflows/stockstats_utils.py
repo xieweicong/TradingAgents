@@ -30,15 +30,34 @@ class StockstatsUtils:
 
         if not online:
             try:
+                # Try to read CSV with error handling for malformed data
                 data = pd.read_csv(
                     os.path.join(
                         data_dir,
                         f"{symbol}-YFin-data-2015-01-01-2025-03-25.csv",
-                    )
+                    ),
+                    on_bad_lines='skip',  # Skip malformed lines
+                    engine='python'       # Use python parser which is more forgiving
                 )
                 df = wrap(data)
             except FileNotFoundError:
                 raise Exception("Stockstats fail: Yahoo Finance data not fetched yet!")
+            except pd.errors.ParserError as e:
+                print(f"Warning: CSV parsing error for {symbol}: {e}")
+                # Try again with basic read
+                try:
+                    data = pd.read_csv(
+                        os.path.join(
+                            data_dir,
+                            f"{symbol}-YFin-data-2015-01-01-2025-03-25.csv",
+                        ),
+                        error_bad_lines=False,  # Skip bad lines (for older pandas)
+                        warn_bad_lines=False
+                    )
+                    df = wrap(data)
+                except Exception as e2:
+                    print(f"Failed to read CSV for {symbol}: {e2}")
+                    raise Exception(f"Stockstats fail: Cannot parse CSV data for {symbol}")
         else:
             # Get today's date as YYYY-mm-dd to add to cache
             today_date = pd.Timestamp.today()

@@ -1,0 +1,36 @@
+{
+  "app": {
+    "name": "Enhanced Trading Agents",
+    "version": "1.0.0",
+    "description": "Multi-threaded stock analysis platform based on TradingAgents"
+  },
+  "tradingagents": {
+    "llm_provider": "deepseek",
+    "backend_url": "https://api.deepseek.com/v1",
+    "deep_think_llm": "deepseek-reasoner",
+    "quick_think_llm": "deepseek-chat",
+    "max_debate_rounds": 1,
+    "online_tools": true,
+    "disable_memory": true,
+    "project_dir": "."
+  },
+  "multi_stock": {
+    "max_workers": 3,
+    "default_stock_list": "test_stocks",
+    "save_results": true,
+    "results_dir": "data/results/multi_analysis"
+  },
+  "api": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "cors_origins": [
+      "*"
+    ],
+    "rate_limit": "100/minute"
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file": "data/logs/app.log"
+  }
+}
