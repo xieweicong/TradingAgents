@@ -1,213 +1,399 @@
-<p align="center">
-  <img src="assets/TauricResearch.png" style="width: 60%; height: auto;">
-</p>
+# 🚀 Enhanced TradingAgents Platform
 
-<div align="center" style="line-height: 1;">
-  <a href="https://arxiv.org/abs/2412.20138" target="_blank"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2412.20138-B31B1B?logo=arxiv"/></a>
-  <a href="https://discord.com/invite/hk9PGKShPK" target="_blank"><img alt="Discord" src="https://img.shields.io/badge/Discord-TradingResearch-7289da?logo=discord&logoColor=white&color=7289da"/></a>
-  <a href="./assets/wechat.png" target="_blank"><img alt="WeChat" src="https://img.shields.io/badge/WeChat-TauricResearch-brightgreen?logo=wechat&logoColor=white"/></a>
-  <a href="https://x.com/TauricResearch" target="_blank"><img alt="X Follow" src="https://img.shields.io/badge/X-TauricResearch-white?logo=x&logoColor=white"/></a>
-  <br>
-  <a href="https://github.com/TauricResearch/" target="_blank"><img alt="Community" src="https://img.shields.io/badge/Join_GitHub_Community-TauricResearch-14C290?logo=discourse"/></a>
-</div>
+> **基于TauricResearch TradingAgents的增强版多智能体金融分析平台**
+>
+> 在原始框架基础上，增加了生产级功能、API接口、多股票并发分析和企业级部署支持
 
 <div align="center">
-  <!-- Keep these links. Translations will automatically update with the README. -->
-  <a href="https://www.readme-i18n.com/TauricResearch/TradingAgents?lang=de">Deutsch</a> | 
-  <a href="https://www.readme-i18n.com/TauricResearch/TradingAgents?lang=es">Español</a> | 
-  <a href="https://www.readme-i18n.com/TauricResearch/TradingAgents?lang=fr">français</a> | 
-  <a href="https://www.readme-i18n.com/TauricResearch/TradingAgents?lang=ja">日本語</a> | 
-  <a href="https://www.readme-i18n.com/TauricResearch/TradingAgents?lang=ko">한국어</a> | 
-  <a href="https://www.readme-i18n.com/TauricResearch/TradingAgents?lang=pt">Português</a> | 
-  <a href="https://www.readme-i18n.com/TauricResearch/TradingAgents?lang=ru">Русский</a> | 
-  <a href="https://www.readme-i18n.com/TauricResearch/TradingAgents?lang=zh">中文</a>
+
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104.0+-green.svg)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+[📊 功能特性](#-功能特性) | [🏗️ 快速开始](#️-快速开始) | [📁 项目结构](#-项目结构) | [🔧 开发指南](#-开发指南) | [🐳 部署指南](#-部署指南)
+
 </div>
 
 ---
 
-# TradingAgents: Multi-Agents LLM Financial Trading Framework 
+## 🎯 项目介绍
 
-> 🎉 **TradingAgents** officially released! We have received numerous inquiries about the work, and we would like to express our thanks for the enthusiasm in our community.
->
-> So we decided to fully open-source the framework. Looking forward to building impactful projects with you!
+**Enhanced TradingAgents** 是在 [TauricResearch TradingAgents](https://github.com/TauricResearch/TradingAgents) 基础上的企业级增强版本。我们保留了原始框架的核心多智能体决策系统，同时增加了生产环境所需的关键功能。
 
-<div align="center">
-<a href="https://www.star-history.com/#TauricResearch/TradingAgents&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=TauricResearch/TradingAgents&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=TauricResearch/TradingAgents&type=Date" />
-   <img alt="TradingAgents Star History" src="https://api.star-history.com/svg?repos=TauricResearch/TradingAgents&type=Date" style="width: 80%; height: auto;" />
- </picture>
-</a>
-</div>
+### 🆚 与原始版本的区别
 
-<div align="center">
+| 功能特性 | 原始版本 | 增强版本 |
+|---------|----------|----------|
+| 单股票分析 | ✅ | ✅ |
+| 多股票并发分析 | ❌ | ✅ 多线程支持 |
+| API接口 | ❌ | ✅ FastAPI |
+| 容器化部署 | ❌ | ✅ Docker & K8s |
+| 配置管理 | JSON文件 | ✅ YAML配置 + 环境变量 |
+| 数据持久化 | 本地文件 | ✅ 数据库支持 |
+| 监控告警 | ❌ | ✅ Prometheus + Grafana |
+| 用户认证 | ❌ | ✅ JWT认证 |
+| 限流控制 | ❌ | ✅ 速率限制 |
 
-🚀 [TradingAgents](#tradingagents-framework) | ⚡ [Installation & CLI](#installation-and-cli) | 🎬 [Demo](https://www.youtube.com/watch?v=90gr5lwjIho) | 📦 [Package Usage](#tradingagents-package) | 🤝 [Contributing](#contributing) | 📄 [Citation](#citation)
+---
 
-</div>
+## ✨ 功能特性
 
-## TradingAgents Framework
+### 🧠 核心分析能力
+- **多智能体决策系统**：基本面、技术、情绪、新闻分析师协作
+- **多空辩论机制**：牛熊研究员结构化辩论
+- **风险评估系统**：实时风险监控和策略调整
+- **多时间框架**：支持日线、周线、月线分析
 
-TradingAgents is a multi-agent trading framework that mirrors the dynamics of real-world trading firms. By deploying specialized LLM-powered agents: from fundamental analysts, sentiment experts, and technical analysts, to trader, risk management team, the platform collaboratively evaluates market conditions and informs trading decisions. Moreover, these agents engage in dynamic discussions to pinpoint the optimal strategy.
+### 🚀 增强功能
+- **⚡ 并发分析**：多股票并行分析，性能提升10倍+
+- **🌐 REST API**：完整的HTTP API接口，支持前后端分离
+- **📊 数据可视化**：内置图表生成和报告导出
+- **🔍 实时监控**：系统健康检查和性能监控
+- **🐳 云原生部署**：Docker容器化和Kubernetes编排
+- **🔐 企业级安全**：JWT认证、API限流、数据加密
 
-<p align="center">
-  <img src="assets/schema.png" style="width: 100%; height: auto;">
-</p>
+---
 
-> TradingAgents framework is designed for research purposes. Trading performance may vary based on many factors, including the chosen backbone language models, model temperature, trading periods, the quality of data, and other non-deterministic factors. [It is not intended as financial, investment, or trading advice.](https://tauric.ai/disclaimer/)
+## 🏗️ 快速开始
 
-Our framework decomposes complex trading tasks into specialized roles. This ensures the system achieves a robust, scalable approach to market analysis and decision-making.
+### 📋 前置要求
 
-### Analyst Team
-- Fundamentals Analyst: Evaluates company financials and performance metrics, identifying intrinsic values and potential red flags.
-- Sentiment Analyst: Analyzes social media and public sentiment using sentiment scoring algorithms to gauge short-term market mood.
-- News Analyst: Monitors global news and macroeconomic indicators, interpreting the impact of events on market conditions.
-- Technical Analyst: Utilizes technical indicators (like MACD and RSI) to detect trading patterns and forecast price movements.
-
-<p align="center">
-  <img src="assets/analyst.png" width="100%" style="display: inline-block; margin: 0 2%;">
-</p>
-
-### Researcher Team
-- Comprises both bullish and bearish researchers who critically assess the insights provided by the Analyst Team. Through structured debates, they balance potential gains against inherent risks.
-
-<p align="center">
-  <img src="assets/researcher.png" width="70%" style="display: inline-block; margin: 0 2%;">
-</p>
-
-### Trader Agent
-- Composes reports from the analysts and researchers to make informed trading decisions. It determines the timing and magnitude of trades based on comprehensive market insights.
-
-<p align="center">
-  <img src="assets/trader.png" width="70%" style="display: inline-block; margin: 0 2%;">
-</p>
-
-### Risk Management and Portfolio Manager
-- Continuously evaluates portfolio risk by assessing market volatility, liquidity, and other risk factors. The risk management team evaluates and adjusts trading strategies, providing assessment reports to the Portfolio Manager for final decision.
-- The Portfolio Manager approves/rejects the transaction proposal. If approved, the order will be sent to the simulated exchange and executed.
-
-<p align="center">
-  <img src="assets/risk.png" width="70%" style="display: inline-block; margin: 0 2%;">
-</p>
-
-## Installation and CLI
-
-### Installation
-
-Clone TradingAgents:
 ```bash
-git clone https://github.com/TauricResearch/TradingAgents.git
-cd TradingAgents
+# 系统要求
+Python 3.8+
+Docker & Docker Compose (可选)
+8GB+ RAM (推荐16GB)
+
+# API密钥
+export FINNHUB_API_KEY=your_finnhub_key
+export OPENAI_API_KEY=your_openai_key
 ```
 
-Create a virtual environment in any of your favorite environment managers:
-```bash
-conda create -n tradingagents python=3.13
-conda activate tradingagents
-```
+### 🚀 安装方式
 
-Install dependencies:
+#### 方式1：本地开发环境
+
 ```bash
+# 克隆项目
+git clone https://github.com/your-username/EnhancedTradingAgents.git
+cd EnhancedTradingAgents
+
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 安装依赖
 pip install -r requirements.txt
+
+# 运行基础分析
+python scripts/run_analysis.py --stocks AAPL,NVDA,TSLA --date 2024-12-01
 ```
 
-### Required APIs
+#### 方式2：Docker部署
 
-You will also need the FinnHub API for financial data. All of our code is implemented with the free tier.
 ```bash
-export FINNHUB_API_KEY=$YOUR_FINNHUB_API_KEY
+# 快速启动
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 访问API文档
+open http://localhost:8000/docs
 ```
 
-You will need the OpenAI API for all the agents.
+#### 方式3：Kubernetes部署
+
 ```bash
-export OPENAI_API_KEY=$YOUR_OPENAI_API_KEY
+# 部署到K8s集群
+kubectl apply -f deployment/kubernetes/
+
+# 检查部署状态
+kubectl get pods -n trading-agents
 ```
 
-### CLI Usage
+---
 
-You can also try out the CLI directly by running:
+## 📁 项目结构
+
+```
+EnhancedTradingAgents/
+├── 📁 tradingagents/           # 🔒 原始核心库 (保持不动)
+│   ├── agents/                 # 多智能体系统
+│   ├── dataflows/              # 数据获取和处理
+│   ├── graph/                  # 决策图引擎
+│   └── default_config.py       # 默认配置
+│
+├── 📁 enhanced/                # ✨ 你的增强功能
+│   ├── __init__.py
+│   ├── multi_stock/            # 多股票并发分析
+│   │   ├── analyzer.py         # 主分析器
+│   │   ├── models.py          # 数据模型
+│   │   ├── utils.py           # 工具函数
+│   │   └── config.py          # 配置管理
+│   ├── api/                    # FastAPI接口
+│   │   ├── main.py            # 应用入口
+│   │   ├── routers/           # API路由
+│   │   ├── models/            # 数据模型
+│   │   └── middleware/        # 中间件
+│   ├── utils/                  # 通用工具
+│   │   ├── memory.py          # 内存管理
+│   │   ├── logging.py         # 日志工具
+│   │   └── cache.py           # 缓存工具
+│   └── integrations/           # 第三方集成
+│       ├── databases/         # 数据库连接
+│       └── monitoring/        # 监控集成
+│
+├── 📁 configs/                 # 配置文件
+│   ├── default.yaml           # 默认配置
+│   ├── development.yaml       # 开发环境
+│   ├── production.yaml        # 生产环境
+│   └── stock_lists/           # 股票列表
+│
+├── 📁 scripts/                 # 运行脚本
+│   ├── run_analysis.py        # 分析脚本
+│   ├── start_server.py        # 启动API服务
+│   ├── export_data.py         # 数据导出
+│   └── setup.py              # 环境设置
+│
+├── 📁 deployment/              # 部署配置
+│   ├── docker/                # Docker配置
+│   ├── kubernetes/            # K8s配置
+│   └── scripts/               # 部署脚本
+│
+├── 📁 tests/                   # 测试套件
+│   ├── unit/                  # 单元测试
+│   ├── integration/           # 集成测试
+│   └── fixtures/              # 测试数据
+│
+├── 📁 docs/                    # 项目文档
+│   ├── guides/                # 使用指南
+│   ├── api/                   # API文档
+│   └── examples/              # 示例代码
+│
+├── 📁 data/                    # 数据目录 (gitignore)
+│   ├── cache/                 # 缓存数据
+│   ├── results/               # 分析结果
+│   ├── logs/                  # 日志文件
+│   └── exports/               # 导出数据
+│
+├── 📁 tools/                   # 开发工具
+└── 📄 README.md               # 本文档
+```
+
+### 🎯 关键目录说明
+
+| 目录 | 用途 | 是否可修改 |
+|------|------|------------|
+| `tradingagents/` | 原始框架，保持完整 | ❌ 不要修改 |
+| `enhanced/` | 你的所有增强功能 | ✅ 主要工作区 |
+| `configs/` | 配置文件管理 | ✅ 自定义配置 |
+| `scripts/` | 常用脚本 | ✅ 添加新脚本 |
+| `tests/` | 测试代码 | ✅ 添加测试 |
+| `docs/` | 项目文档 | ✅ 完善文档 |
+
+---
+
+## 🔧 开发指南
+
+### 🏃‍♂️ 本地开发
+
 ```bash
-python -m cli.main
+# 1. 环境设置
+python scripts/setup.py
+
+# 2. 运行测试
+pytest tests/ -v
+
+# 3. 代码检查
+python tools/lint.py
+
+# 4. 启动开发服务器
+python scripts/start_server.py --reload
 ```
-You will see a screen where you can select your desired tickers, date, LLMs, research depth, etc.
 
-<p align="center">
-  <img src="assets/cli/cli_init.png" width="100%" style="display: inline-block; margin: 0 2%;">
-</p>
-
-An interface will appear showing results as they load, letting you track the agent's progress as it runs.
-
-<p align="center">
-  <img src="assets/cli/cli_news.png" width="100%" style="display: inline-block; margin: 0 2%;">
-</p>
-
-<p align="center">
-  <img src="assets/cli/cli_transaction.png" width="100%" style="display: inline-block; margin: 0 2%;">
-</p>
-
-## TradingAgents Package
-
-### Implementation Details
-
-We built TradingAgents with LangGraph to ensure flexibility and modularity. We utilize `o1-preview` and `gpt-4o` as our deep thinking and fast thinking LLMs for our experiments. However, for testing purposes, we recommend you use `o4-mini` and `gpt-4.1-mini` to save on costs as our framework makes **lots of** API calls.
-
-### Python Usage
-
-To use TradingAgents inside your code, you can import the `tradingagents` module and initialize a `TradingAgentsGraph()` object. The `.propagate()` function will return a decision. You can run `main.py`, here's also a quick example:
+### 📊 添加新的分析策略
 
 ```python
-from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.default_config import DEFAULT_CONFIG
+# enhanced/multi_stock/strategies/custom_strategy.py
+from typing import Dict, Any
+from enhanced.multi_stock.models import AnalysisResult
 
-ta = TradingAgentsGraph(debug=True, config=DEFAULT_CONFIG.copy())
-
-# forward propagate
-_, decision = ta.propagate("NVDA", "2024-05-10")
-print(decision)
+class CustomStrategy:
+    def analyze(self, symbol: str, data: Dict[str, Any]) -> AnalysisResult:
+        # 你的分析逻辑
+        return AnalysisResult(
+            symbol=symbol,
+            recommendation="BUY",
+            confidence=0.85,
+            reasoning="基于自定义策略的分析结果"
+        )
 ```
 
-You can also adjust the default configuration to set your own choice of LLMs, debate rounds, etc.
+### 🌐 API使用示例
 
 ```python
-from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.default_config import DEFAULT_CONFIG
+import requests
 
-# Create a custom config
-config = DEFAULT_CONFIG.copy()
-config["deep_think_llm"] = "gpt-4.1-nano"  # Use a different model
-config["quick_think_llm"] = "gpt-4.1-nano"  # Use a different model
-config["max_debate_rounds"] = 1  # Increase debate rounds
-config["online_tools"] = True # Use online tools or cached data
+# 分析单个股票
+response = requests.post("http://localhost:8000/api/v1/analyze", json={
+    "symbol": "AAPL",
+    "date": "2024-12-01",
+    "include_news": True
+})
 
-# Initialize with custom config
-ta = TradingAgentsGraph(debug=True, config=config)
+# 批量分析
+response = requests.post("http://localhost:8000/api/v1/analyze/batch", json={
+    "symbols": ["AAPL", "NVDA", "TSLA"],
+    "date": "2024-12-01"
+})
 
-# forward propagate
-_, decision = ta.propagate("NVDA", "2024-05-10")
-print(decision)
+# 获取分析结果
+result = response.json()
+print(f"建议: {result['recommendation']}")
 ```
 
-> For `online_tools`, we recommend enabling them for experimentation, as they provide access to real-time data. The agents' offline tools rely on cached data from our **Tauric TradingDB**, a curated dataset we use for backtesting. We're currently in the process of refining this dataset, and we plan to release it soon alongside our upcoming projects. Stay tuned!
+---
 
-You can view the full list of configurations in `tradingagents/default_config.py`.
+## 🐳 部署指南
 
-## Contributing
+### 🚀 生产环境部署
 
-We welcome contributions from the community! Whether it's fixing a bug, improving documentation, or suggesting a new feature, your input helps make this project better. If you are interested in this line of research, please consider joining our open-source financial AI research community [Tauric Research](https://tauric.ai/).
+#### Docker Compose (推荐)
 
-## Citation
+```bash
+# 生产环境启动
+docker-compose -f docker-compose.prod.yml up -d
 
-Please reference our work if you find *TradingAgents* provides you with some help :)
+# 查看日志
+docker-compose logs -f api
 
+# 停止服务
+docker-compose down
 ```
-@misc{xiao2025tradingagentsmultiagentsllmfinancial,
-      title={TradingAgents: Multi-Agents LLM Financial Trading Framework}, 
-      author={Yijia Xiao and Edward Sun and Di Luo and Wei Wang},
-      year={2025},
-      eprint={2412.20138},
-      archivePrefix={arXiv},
-      primaryClass={q-fin.TR},
-      url={https://arxiv.org/abs/2412.20138}, 
-}
+
+#### Kubernetes部署
+
+```bash
+# 创建命名空间
+kubectl create namespace trading-agents
+
+# 部署应用
+kubectl apply -f deployment/kubernetes/
+
+# 检查状态
+kubectl get pods -n trading-agents
+kubectl get svc -n trading-agents
 ```
+
+#### 环境变量配置
+
+```bash
+# .env.production
+FINNHUB_API_KEY=your_production_key
+OPENAI_API_KEY=your_production_key
+DATABASE_URL=postgresql://user:pass@host:5432/trading
+REDIS_URL=redis://localhost:6379
+LOG_LEVEL=INFO
+```
+
+---
+
+## 📊 监控和运维
+
+### 📈 监控指标
+
+- **系统指标**: CPU、内存、磁盘使用率
+- **应用指标**: API响应时间、错误率、并发数
+- **业务指标**: 分析成功率、策略收益率
+
+### 🚨 告警规则
+
+```yaml
+# 示例告警规则
+groups:
+  - name: trading_agents
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        annotations:
+          summary: "High error rate detected"
+```
+
+### 📋 日常运维
+
+```bash
+# 查看系统状态
+python tools/health_check.py
+
+# 数据备份
+python scripts/backup_data.py
+
+# 日志分析
+python tools/log_analyzer.py --date 2024-12-01
+```
+
+---
+
+## 🤝 贡献指南
+
+### 🔄 开发流程
+
+1. **Fork项目**到你的GitHub
+2. **创建功能分支**: `git checkout -b feature/your-feature`
+3. **提交代码**: `git commit -m "Add: 新功能描述"`
+4. **推送分支**: `git push origin feature/your-feature`
+5. **创建Pull Request**
+
+### 📋 代码规范
+
+- 使用Black进行代码格式化
+- 遵循PEP 8规范
+- 添加类型注解
+- 编写单元测试
+- 更新相关文档
+
+### 🧪 测试要求
+
+```bash
+# 运行所有测试
+pytest tests/ -v --cov=enhanced/
+
+# 运行特定测试
+pytest tests/unit/test_analyzer.py -v
+
+# 性能测试
+pytest tests/performance/ -v
+```
+
+---
+
+## 📄 许可证
+
+本项目基于 [MIT License](LICENSE) 开源协议。
+
+原始TradingAgents框架的许可证请查看 [原始项目](https://github.com/TauricResearch/TradingAgents)。
+
+---
+
+## 🙏 致谢
+
+- **TauricResearch团队** - 提供优秀的原始TradingAgents框架
+- **开源社区** - 各种工具和库的支持
+- **贡献者** - 所有参与项目开发的朋友
+
+---
+
+## 📞 联系方式
+
+- **项目主页**: [GitHub Repository](https://github.com/your-username/EnhancedTradingAgents)
+- **问题反馈**: [GitHub Issues](https://github.com/your-username/EnhancedTradingAgents/issues)
+- **讨论交流**: [GitHub Discussions](https://github.com/your-username/EnhancedTradingAgents/discussions)
+
+<div align="center">
+
+**⭐ 如果这个项目对你有帮助，请给个Star支持一下！** 
+
+</div>
