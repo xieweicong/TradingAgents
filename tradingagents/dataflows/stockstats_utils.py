@@ -39,6 +39,8 @@ class StockstatsUtils:
                     on_bad_lines='skip',  # Skip malformed lines
                     engine='python'       # Use python parser which is more forgiving
                 )
+                data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+                data.dropna(subset=['Date'], inplace=True)
                 df = wrap(data)
             except FileNotFoundError:
                 raise Exception("Stockstats fail: Yahoo Finance data not fetched yet!")

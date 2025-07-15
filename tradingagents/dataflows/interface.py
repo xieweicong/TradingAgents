@@ -4,6 +4,7 @@ from .yfin_utils import *
 from .stockstats_utils import *
 from .googlenews_utils import *
 from .finnhub_utils import get_data_in_range
+from .deepseek_fundamentals import get_fundamentals_deepseek
 from dateutil.relativedelta import relativedelta
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -788,35 +789,129 @@ def get_global_news_openai(curr_date):
 
 
 def get_fundamentals_openai(ticker, curr_date):
+    """
+    Intelligent tool selection based on LLM provider configuration
+    """
     config = get_config()
-    client = OpenAI(base_url=config["backend_url"])
+    llm_provider = config.get("llm_provider", "openai").lower()
+    
+    if llm_provider == "deepseek":
+        # Use DuckDuckGo search for DeepSeek compatibility
+        from .deepseek_fundamentals import get_fundamentals_deepseek
+        return get_fundamentals_deepseek(ticker, curr_date)
+    
+    elif llm_provider == "openai":
+        # Original OpenAI web search (only if not DeepSeek)
+        client = OpenAI(base_url=config["backend_url"])
+        response = client.responses.create(
+            model=config["quick_think_llm"],
+            input=[
+                {
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": f"Can you search Fundamental for discussions on {ticker} during of the month before {curr_date} to the month of {curr_date}. Make sure you only get the data posted during that period. List as a table, with PE/PS/Cash flow/ etc",
+                        }
+                    ],
+                }
+            ],
+            text={"format": {"type": "text"}},
+            reasoning={},
+            tools=[
+                {
+                    "type": "web_search_preview",
+                    "user_location": {"type": "approximate"},
+                    "search_context_size": "low",
+                }
+            ],
+            temperature=1,
+            max_output_tokens=4096,
+            top_p=1,
+            store=True,
+        )
+        return response.output[1].content[0].text
+    
+    else:
+        # Fallback to web search + data aggregation
+        return get_fundamentals_web_fallback(ticker, curr_date)
 
-    response = client.responses.create(
-        model=config["quick_think_llm"],
-        input=[
-            {
-                "role": "system",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": f"Can you search Fundamental for discussions on {ticker} during of the month before {curr_date} to the month of {curr_date}. Make sure you only get the data posted during that period. List as a table, with PE/PS/Cash flow/ etc",
-                    }
-                ],
-            }
-        ],
-        text={"format": {"type": "text"}},
-        reasoning={},
-        tools=[
-            {
-                "type": "web_search_preview",
-                "user_location": {"type": "approximate"},
-                "search_context_size": "low",
-            }
-        ],
-        temperature=1,
-        max_output_tokens=4096,
-        top_p=1,
-        store=True,
-    )
 
-    return response.output[1].content[0].text
+def get_fundamentals_web_fallback(ticker: str, curr_date: str) -> str:
+    """通用回退方案，支持任何提供商"""
+    from .deepseek_fundamentals import get_fundamentals_deepseek
+    return get_fundamentals_deepseek(ticker, curr_date)
+
+
+def get_fundamentals_deepseek(ticker: str, curr_date: str) -> str:
+    """
+    DeepSeek专用无API key基本面搜索
+    使用duckduckgo-search包实现
+    """
+    try:
+        from duckduckgo_search import DDGS
+        
+        ddgs = DDGS()
+        queries = [
+            f"{ticker} fundamental analysis PE PEG PS cash flow earnings",
+            f"{ticker} quarterly guidance financial outlook {curr_date}",
+            f"{ticker} stock valuation analysis news"
+        ]
+        
+        search_results = []
+        for query in queries:
+            results = ddgs.text(query, max_results=4, region='us-en')
+            search_results.extend(results)
+        
+        # Format results as professional report
+        content_parts = []
+        for i, result in enumerate(search_results[:8], 1):
+            content_parts.append(
+                f"### {i}. {result['title']}\n"
+                f"{result['body'][:250]}...\n"
+                f"*Source: {result['href']}*"
+            )
+        
+        content = "\n\n".join(content_parts)
+        
+        return f"""# Comprehensive Fundamental Analysis: {ticker}
+
+**Analysis Date: {curr_date}**
+
+## Key Discoveries from Web Research
+
+{content}
+
+## Verification Framework
+
+### Manual Cross-Check Sources
+- **SEC EDGAR**: Latest quarterly/annual filings
+- **Company IR**: Official investor relations updates
+- **Yahoo Finance**: Real-time market metrics
+- **Analyst Consensus**: Latest recommendations
+
+### Critical Metrics Table
+| Metric | Manual Source | Notes |
+|--------|---------------|--------|
+| PE Ratio | EDGAR filings | Forward vs trailing |
+| Revenue Growth | 10-K/10-Q | YoY trends |
+| Cash Flow | Company reports | Operating vs free |
+| Guidance | Earnings calls | Management outlook |
+
+---
+*Analysis based on web search aggregation - primary source verification recommended*"""
+        
+    except ImportError:
+        return f"""# {ticker} Fundamental Analysis
+**As of {curr_date}**
+
+## Approach via Primary Sources (Search unavailable)
+
+**Direct verification required:**
+
+1. **SEC Filings**: [EDGAR](https://www.sec.gov/edgar/search-edgar/company-search.html)
+2. **Yahoo Finance**: [Metrics](https://finance.yahoo.com/quote/{ticker})  
+3. **Company IR**: Official investor site
+4. **8-K Reports**: Recent material events
+
+Use this systematic manual approach for comprehensive fundamental assessment."""
