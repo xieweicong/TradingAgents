@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--stock-list", help="Predefined stock list name") 
     parser.add_argument("--date", help="Analysis date (YYYY-MM-DD)")
     parser.add_argument("--workers", type=int, default=1, help="Number of worker threads")
+    parser.add_argument("--force-reanalyze", action="store_true", help="Force reanalysis even if exists")
     
     args = parser.parse_args()
     
@@ -36,13 +37,15 @@ def main():
         results = analyzer.analyze_stocks(
             stock_list=stock_list,
             analysis_date=args.date,
-            save_results=True
+            save_results=True,
+            skip_existing=not args.force_reanalyze
         )
     elif args.stock_list:
         results = analyzer.analyze_stocks(
             stock_list_name=args.stock_list,
             analysis_date=args.date,
-            save_results=True
+            save_results=True,
+            skip_existing=not args.force_reanalyze
         )
     else:
         # 交互模式

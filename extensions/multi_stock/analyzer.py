@@ -159,6 +159,12 @@ class ResultsManager:
     def __init__(self, base_dir: str = "multi_analysis_results"):
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(exist_ok=True)
+        # 可选：添加同步数据库写入器
+        try:
+            from database_writer import DatabaseManager
+            self.db_manager = DatabaseManager()
+        except ImportError:
+            self.db_manager = None
     
     def get_storage_path(self, ticker: str, analysis_date: str) -> Path:
         """Get storage path for a specific analysis"""
@@ -203,6 +209,17 @@ class ResultsManager:
             simplified_result = self._create_simplified_result(result)
             with open(storage_path / "analysis_result.json", 'w', encoding='utf-8') as f:
                 json.dump(simplified_result, f, indent=2, ensure_ascii=False)
+        
+        # 同步写入数据库（解决async问题）
+        if self.db_manager:
+            print(f"📝 正在写入 {result.ticker} 到 PostgreSQL...")
+            try:
+                self.db_manager.save_results(result)
+                print(f"✅ {result.ticker} 数据已成功写入 PostgreSQL")
+            except Exception as e:
+                print(f"⚠️ {result.ticker} 数据库写入失败: {str(e)}")
+                print(f"   继续本地文件存储...")
+                logging.warning(f"PostgreSQL write failed for {result.ticker}: {e}")
         
         # Save individual agent outputs as separate files (for easy access)
         self._save_agent_outputs(storage_path, result)
@@ -726,7 +743,8 @@ class MultiStockAnalyzer:
                       stock_list: List[str] = None,
                       stock_list_name: str = None,
                       analysis_date: str = None,
-                      save_results: bool = True) -> Dict[str, StockAnalysisResult]:
+                      save_results: bool = True,
+                      skip_existing: bool = True) -> Dict[str, StockAnalysisResult]:
         """Analyze multiple stocks concurrently"""
         
         # Clean up any existing memory collections first
@@ -755,9 +773,36 @@ class MultiStockAnalyzer:
         print(f"最大并发数: {self.max_workers}")
         print(f"配置: {self.config['llm_provider']} - {self.config['deep_think_llm']}")
         
-        # Create analysis tasks
+        # Create analysis tasks, skip already analyzed ones
         tasks = []
-        for ticker in stock_list:
+        existing_analyses = {}
+        
+        # Check existing analyses if skip_existing is enabled
+        if skip_existing and self.results_manager.db_manager:
+            logger = self.log_manager.logger
+            logger.info("正在检查已完成的分析...")
+            for ticker in stock_list:
+                if self.results_manager.db_manager.writer.has_analysis_for_today(ticker, analysis_date):
+                    logger.info(f"跳过 {ticker} - 今日已分析")
+                    existing_analyses[ticker] = True
+                else:
+                    existing_analyses[ticker] = False
+        else:
+            existing_analyses = {ticker: False for ticker in stock_list}
+        
+        # Filter stocks to analyze
+        stocks_to_analyze = [ticker for ticker in stock_list if not existing_analyses[ticker]]
+        
+        if not stocks_to_analyze:
+            print("所有股票今日已完成分析，跳过本次运行")
+            self.log_manager.logger.info("所有股票今日已完成分析，跳过本次运行")
+            return {}
+            
+        print(f"开始分析以下股票: {stocks_to_analyze}")
+        self.log_manager.logger.info(f"实际分析股票: {stocks_to_analyze}")
+        
+        # Create tasks for stocks to analyze
+        for ticker in stocks_to_analyze:
             task = AnalysisTask(
                 ticker=ticker,
                 analysis_date=analysis_date,
@@ -799,23 +844,27 @@ class MultiStockAnalyzer:
         progress_thread = threading.Thread(target=self._monitor_progress, daemon=True)
         progress_thread.start()
         
-        # Execute tasks concurrently
+        # Execute tasks concurrently with proper exception handling
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_task = {executor.submit(analyze_single_stock, task): task for task in tasks}
             
             for future in as_completed(future_to_task):
                 task = future_to_task[future]
                 try:
-                    result = future.result()
+                    result = future.result(timeout=600)  # 10 minute timeout
                     results[task.ticker] = result
                     
                     # Save results if requested
                     if save_results:
-                        self.results_manager.save_analysis_result(result)
+                        try:
+                            self.results_manager.save_analysis_result(result)
+                        except Exception as e:
+                            print(f"警告：保存{result.ticker}结果时出错: {str(e)}")
+                            logging.warning(f"保存{result.ticker}结果失败: {e}")
                         
                 except Exception as e:
                     print(f"任务 {task.ticker} 执行失败: {str(e)}")
-                    # Create error result
+                    # Create error result but don't crash the system
                     error_result = StockAnalysisResult(
                         ticker=task.ticker,
                         analysis_date=task.analysis_date,
@@ -826,6 +875,8 @@ class MultiStockAnalyzer:
                         error_message=str(e)
                     )
                     results[task.ticker] = error_result
+                    # Log but don't raise the exception to prevent terminal kill
+                    self.log_manager.logger.error(f"分析任务失败: {task.ticker} - {str(e)}")
         
         # Final status
         self.progress_tracker.print_status()
@@ -839,9 +890,19 @@ class MultiStockAnalyzer:
     def _monitor_progress(self):
         """Monitor and print progress periodically"""
         last_status = {}
+        max_wait_time = 3600  # 60 minutes maximum wait time
+        start_time = datetime.now()
+        
         while True:
             status = self.progress_tracker.get_status()
+            current_time = datetime.now()
+            elapsed = (current_time - start_time).total_seconds()
+            
+            # Break if all tasks are complete or timeout reached
             if status['running'] == 0 and status['pending'] == 0:
+                break
+            if elapsed > max_wait_time:
+                print("⚠️ 进度监控超时 (60分钟)，将停止监控")
                 break
             
             # Only log if status changed
